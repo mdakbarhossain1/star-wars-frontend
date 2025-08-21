@@ -6,59 +6,73 @@ import { useNavigate } from "react-router-dom";
 import type { Character, CharactersResponse } from "../types/character";
 import { useDebounce } from "../hooks/useDebounce";
 
+// Loader component
+function Loader() {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-yellow-400 border-b-4 border-gray-700"></div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 500);
+  const navigate = useNavigate();
 
+  // Load characters either for normal listing or search
   useEffect(() => {
-    loadCharacters();
-  }, [page]);
+    let isCancelled = false;
 
-  useEffect(() => {
-    if (debouncedQuery) {
-      handleSearch(debouncedQuery);
-    } else {
-      loadCharacters();
-    }
-  }, [debouncedQuery, page]);
+    const fetchCharacters = async () => {
+      setLoading(true);
+      try {
+        if (debouncedQuery) {
+          const data = await searchCharacters(debouncedQuery);
+          if (isCancelled) return;
 
-  const loadCharacters = async () => {
-    const data: CharactersResponse = await getCharacters(page, 12);
-    setCharacters(data.data);
-    setTotalPages(data.totalPages);
-  };
+          const mappedCharacters: Character[] = data.data.map((item: any) => ({
+            uid: item.result.uid,
+            name: item.result.properties.name,
+            url: item.result.properties.url,
+          }));
 
-  const handleSearch = async (query: string) => {
-    if (!query) {
-      loadCharacters();
-      return;
-    }
-    const data = await searchCharacters(query);
+          setCharacters(mappedCharacters);
+          setTotalPages(1); // disable pagination during search
+        } else {
+          const data: CharactersResponse = await getCharacters(page, 12);
+          if (isCancelled) return;
 
-    const mappedCharacters: Character[] = data.data.map((item: any) => ({
-      uid: item.result.uid,
-      name: item.result.properties.name,
-      url: item.result.properties.url,
-    }));
+          setCharacters(data.data);
+          setTotalPages(data.totalPages);
+        }
+      } catch (err) {
+        console.error("Error fetching characters:", err);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
 
-    setCharacters(mappedCharacters);
-    setTotalPages(1); // disable pagination for search
-  };
+    fetchCharacters();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [page, debouncedQuery]);
 
   const renderPagination = () => {
+    if (debouncedQuery) return null; // hide pagination during search
+
     const pages = [];
     const maxVisible = 5;
-
     let start = Math.max(1, page - 2);
     let end = Math.min(totalPages, start + maxVisible - 1);
 
-    if (end - start < maxVisible - 1) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
+    if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
 
     if (start > 1) {
       pages.push(
@@ -70,9 +84,7 @@ export default function Home() {
           1
         </button>
       );
-      if (start > 2) {
-        pages.push(<span key="start-ellipsis">...</span>);
-      }
+      if (start > 2) pages.push(<span key="start-ellipsis">...</span>);
     }
 
     for (let i = start; i <= end; i++) {
@@ -92,9 +104,7 @@ export default function Home() {
     }
 
     if (end < totalPages) {
-      if (end < totalPages - 1) {
-        pages.push(<span key="end-ellipsis">...</span>);
-      }
+      if (end < totalPages - 1) pages.push(<span key="end-ellipsis">...</span>);
       pages.push(
         <button
           key={totalPages}
@@ -114,42 +124,52 @@ export default function Home() {
       <h1 className="text-4xl font-bold text-center text-yellow-400 mb-6">
         Star Wars Characters
       </h1>
+
       <div className="flex justify-center mb-8">
         <SearchBar onSearch={setSearchQuery} />
       </div>
-      <CharacterList
-        characters={characters}
-        onSelect={(id) => navigate(`/character/${id}`)}
-      />
+
+      {loading ? (
+        <Loader />
+      ) : characters.length > 0 ? (
+        <CharacterList
+          characters={characters}
+          onSelect={(id) => navigate(`/character/${id}`)}
+        />
+      ) : (
+        <p className="text-center text-gray-400 mt-8">No characters found.</p>
+      )}
 
       {/* Pagination */}
-      <div className="flex justify-center gap-2 mt-8 items-center">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          disabled={page === 1}
-          className={`px-4 py-2 rounded-lg ${
-            page === 1
-              ? "bg-gray-600 cursor-not-allowed"
-              : "bg-yellow-400 text-black hover:bg-yellow-300"
-          }`}
-        >
-          Prev
-        </button>
+      {!debouncedQuery && (
+        <div className="flex justify-center gap-2 mt-8 items-center">
+          <button
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+            className={`px-4 py-2 rounded-lg ${
+              page === 1
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-yellow-400 text-black hover:bg-yellow-300"
+            }`}
+          >
+            Prev
+          </button>
 
-        <div className="flex gap-2">{renderPagination()}</div>
+          <div className="flex gap-2">{renderPagination()}</div>
 
-        <button
-          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          disabled={page === totalPages}
-          className={`px-4 py-2 rounded-lg ${
-            page === totalPages
-              ? "bg-gray-600 cursor-not-allowed"
-              : "bg-yellow-400 text-black hover:bg-yellow-300"
-          }`}
-        >
-          Next
-        </button>
-      </div>
+          <button
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+            className={`px-4 py-2 rounded-lg ${
+              page === totalPages
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-yellow-400 text-black hover:bg-yellow-300"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
