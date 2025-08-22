@@ -8,6 +8,16 @@ Welcome to the **Star Wars Frontend** project! This application is designed to p
 - Search and filter data easily
 - Responsive and user-friendly design
 
+### 📌 Additional Features
+
+- **Landing Page** – Introductory page about the app.
+- **Character Listing Page** – Browse Star Wars characters from the API.
+- **Character Details Page** – View detailed information for each character.
+- **Responsive Navbar** – Persistent navigation bar across pages.
+- **Sticky Footer** – Always visible at the bottom with copyright & contact info.
+- **Profile Popup** – A floating chat-style popup with developer profile details.
+- **Routing** – Client-side navigation using React Router v6.
+
 ## Getting Started
 
 1. Clone the repository:
