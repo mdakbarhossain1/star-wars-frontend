@@ -19,13 +19,13 @@ export default function Navbar() {
           <div className="hidden md:flex space-x-6">
             <Link
               to="/"
-              className="hover:text-yellow-400 transition-colors duration-200"
+              className="hover:text-yellow-400 transition-colors duration-200 text-amber-300 font-extrabold"
             >
               Landing
             </Link>
             <Link
               to="/characters"
-              className="hover:text-yellow-400 transition-colors duration-200"
+              className="hover:text-yellow-400 transition-colors duration-200 text-amber-300 font-extrabold"
             >
               Characters
             </Link>

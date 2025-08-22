@@ -2,8 +2,6 @@ export interface Character {
   uid: string;
   name: string;
   url: string;
-  height?: string;
-  gender?: string;
 }
 
 export interface CharactersResponse {
